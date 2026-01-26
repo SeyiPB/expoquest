@@ -35,13 +35,22 @@ export default function ScanPage() {
         setProcessing(true)
 
         try {
+            console.log("Scanned raw value:", rawValue)
             let stationId = rawValue
             try {
                 const parsed = JSON.parse(rawValue)
                 if (parsed.s) stationId = parsed.s
                 if (parsed.station_id) stationId = parsed.station_id
             } catch {
-                // Not JSON
+                // Not JSON, assume raw UUID string
+            }
+
+            console.log("Resolved Station ID:", stationId)
+
+            // Validate UUID format to prevent RPC crashes
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (!uuidRegex.test(stationId)) {
+                throw new Error(`Invalid QR Format. Expected Station UUID, got: ${stationId.substring(0, 10)}...`)
             }
 
             const { data, error } = await supabase.rpc("record_scan", {
@@ -49,7 +58,10 @@ export default function ScanPage() {
                 p_station_id: stationId
             })
 
-            if (error) throw error
+            if (error) {
+                console.error("RPC Error:", error)
+                throw new Error(error.message || "Server Error")
+            }
 
             if (data.success) {
                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
@@ -66,11 +78,11 @@ export default function ScanPage() {
                 })
             }
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Scan error:", err)
             setResult({
                 success: false,
-                message: "Invalid QR Code or System Error"
+                message: err.message || "Invalid QR Code or System Error"
             })
         } finally {
             setProcessing(false)
