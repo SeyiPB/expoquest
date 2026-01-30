@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,10 @@ export default function CheckInPage() {
     const supabase = createClient()
     const [loading, setLoading] = useState(false)
     const [step, setStep] = useState(1)
+
+    useEffect(() => {
+        router.push("/register")
+    }, [router])
     const [formData, setFormData] = useState({
         role: "",
         experience: 3,

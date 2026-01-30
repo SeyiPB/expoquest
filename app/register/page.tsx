@@ -177,10 +177,15 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-foreground flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon-purple/20 rounded-full blur-[120px] -z-10" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-neon-blue/20 rounded-full blur-[120px] -z-10" />
+        <div className="min-h-screen text-foreground flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Background Image with Overlay */}
+            <div className="absolute inset-0 -z-10">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{ backgroundImage: 'url("/assets/queens.jpg")' }}
+                />
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-[2px]" />
+            </div>
 
             <div className="w-full max-w-lg">
                 {/* Header */}
@@ -228,7 +233,10 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Form Card */}
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-6 shadow-2xl">
+                <div className="glass-card p-6 sm:p-8 neon-border-blue relative">
+                    <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                        <Sparkles className="w-24 h-24" />
+                    </div>
                     <AnimatePresence mode="wait" custom={currentStep}>
                         <motion.div
                             key={currentStep}

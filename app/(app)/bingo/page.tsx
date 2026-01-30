@@ -65,7 +65,7 @@ export default function BingoPage() {
         const fetchData = async () => {
             const attendeeId = localStorage.getItem("expo_attendee_id")
             if (!attendeeId) {
-                router.push("/check-in")
+                router.push("/register")
                 return
             }
 
@@ -130,49 +130,51 @@ export default function BingoPage() {
                     return (
                         <div
                             key={quest.id}
-                            className={`border rounded-2xl p-4 space-y-3 transition-all ${isCompleted
-                                ? "bg-neon-blue/5 border-neon-blue/20 opacity-80"
-                                : "bg-white/5 border-white/10 active:scale-[0.98]"
-                                }`}
+                            className={`glass-card transition-all ${isCompleted
+                                ? "opacity-60 grayscale-[0.5]"
+                                : "active:scale-[0.99]"
+                                } shadow-lg`}
                         >
-                            <div className="flex justify-between items-start">
-                                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border ${isCompleted
-                                    ? "bg-neon-blue/20 text-neon-blue border-neon-blue/30"
-                                    : "bg-neon-blue/10 text-neon-blue border-neon-blue/20"
-                                    }`}>
-                                    {quest.category}
-                                </span>
-                                <div className="text-right">
-                                    <div className={`text-xl font-black tracking-tight ${isCompleted ? 'text-neon-blue' : 'text-white'}`}>
-                                        {isCompleted ? <Check className="w-6 h-6 inline-block" /> : quest.points}
+                            <div className="p-5 flex flex-col gap-4">
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded border ${isCompleted
+                                        ? "bg-neon-blue/20 text-neon-blue border-neon-blue/30"
+                                        : "bg-white/10 text-white/70 border-white/20"
+                                        }`}>
+                                        {quest.category}
+                                    </span>
+                                    <div className="text-right shrink-0">
+                                        <div className={`text-2xl font-black tracking-tighter leading-none ${isCompleted ? 'text-neon-green' : 'text-white'}`}>
+                                            {isCompleted ? <Check className="w-6 h-6 inline-block" /> : quest.points}
+                                        </div>
+                                        {!isCompleted && <div className="text-[8px] font-black text-neon-blue uppercase tracking-widest mt-0.5">Points</div>}
                                     </div>
-                                    {!isCompleted && <div className="text-[8px] font-black text-neon-purple uppercase tracking-tighter">Points</div>}
                                 </div>
-                            </div>
 
-                            <div>
-                                <h3 className={`text-sm font-bold mb-1 ${isCompleted ? 'text-white/70' : 'text-white'}`}>{quest.title}</h3>
-                                <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                                    {quest.description}
-                                </p>
-                            </div>
+                                <div className="space-y-1">
+                                    <h3 className={`text-[15px] font-bold leading-snug ${isCompleted ? 'text-white/60' : 'text-white'}`}>{quest.title}</h3>
+                                    <p className="text-[12px] text-gray-400 leading-relaxed font-medium line-clamp-3">
+                                        {quest.description}
+                                    </p>
+                                </div>
 
-                            <div className="pt-2 flex justify-end">
-                                <Button
-                                    size="sm"
-                                    variant={isCompleted ? "ghost" : "outline"}
-                                    disabled={isCompleted}
-                                    onClick={() => {
-                                        setSelectedQuest(quest)
-                                        setIsModalOpen(true)
-                                    }}
-                                    className={`h-8 text-[10px] font-black uppercase tracking-widest transition-all ${isCompleted
-                                        ? "text-neon-blue bg-neon-blue/10"
-                                        : "border-white/10 hover:bg-white/5 active:bg-neon-blue active:text-white active:border-neon-blue"
-                                        }`}
-                                >
-                                    {isCompleted ? "Successfully Completed" : "Mark Complete"}
-                                </Button>
+                                <div className="pt-2 flex justify-end">
+                                    <Button
+                                        size="sm"
+                                        variant={isCompleted ? "ghost" : "outline"}
+                                        disabled={isCompleted}
+                                        onClick={() => {
+                                            setSelectedQuest(quest)
+                                            setIsModalOpen(true)
+                                        }}
+                                        className={`h-9 w-full rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all ${isCompleted
+                                            ? "text-neon-green bg-neon-green/10 border-none"
+                                            : "border-white/10 hover:bg-white/10 hover:border-white/20 active:bg-neon-blue active:text-white active:border-neon-blue shadow-sm"
+                                            }`}
+                                    >
+                                        {isCompleted ? "Goal Achieved" : "Mark Complete"}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )

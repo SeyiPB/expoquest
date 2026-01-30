@@ -120,4 +120,23 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl overflow-hidden;
+  }
+
+  .neon-border-blue {
+    @apply border-neon-blue/40;
+    box-shadow: 0 0 15px hsla(var(--neon-blue), 0.1);
+  }
+
+  .neon-border-purple {
+    @apply border-neon-purple/40;
+    box-shadow: 0 0 15px hsla(var(--neon-purple), 0.1);
+  }
+
+  .neon-border-green {
+    @apply border-neon-green/40;
+    box-shadow: 0 0 15px hsla(var(--neon-green), 0.1);
+  }
 }

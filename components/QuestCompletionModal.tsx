@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Modal } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Loader2, Sparkles, Send } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import confetti from "canvas-confetti"
@@ -20,24 +21,82 @@ interface QuestCompletionModalProps {
     onSuccess: (questId: string) => void
 }
 
+const CITYWORKS_THEMES = [
+    "transportation",
+    "water",
+    "waste water",
+    "wastewater",
+    "sanitation",
+    "construction",
+    "urban development",
+    "integrated systems"
+]
+
 export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: QuestCompletionModalProps) {
     const [answer, setAnswer] = useState("")
+    const [answers, setAnswers] = useState(["", "", ""])
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const supabase = createClient()
 
+    // Reset state when quest changes
+    useEffect(() => {
+        if (quest) {
+            setAnswer("")
+            setAnswers(["", "", ""])
+            setError(null)
+        }
+    }, [quest])
+
     if (!quest) return null
 
-    const handleSubmit = async () => {
-        if (!answer.trim()) {
-            setError("Please provide an answer before submitting.")
-            return
+    const isNysciQuest = quest.id === 'q6'
+
+    const validateNysciAnswers = () => {
+        // Clean and normalize answers
+        const cleanedAnswers = answers.map(a =>
+            a.trim().toLowerCase().replace(/\s+/g, ' ')
+        ).filter(a => a !== "")
+
+        const uniqueAnswers = Array.from(new Set(cleanedAnswers))
+
+        if (uniqueAnswers.length < 3) {
+            throw new Error("Please provide 3 unique themes from the Cityworks exhibit.")
         }
 
-        setSubmitting(true)
+        const validMatches = uniqueAnswers.filter(a => {
+            // Check for exact match or normalized variations (e.g. "wastewater" vs "waste water")
+            return CITYWORKS_THEMES.includes(a) ||
+                CITYWORKS_THEMES.includes(a.replace(/\s/g, '')) ||
+                CITYWORKS_THEMES.some(theme => theme.replace(/\s/g, '') === a.replace(/\s/g, ''))
+        })
+
+        if (validMatches.length < 3) {
+            throw new Error("Some of your answers are incorrect. Please check the themes at the NYSCI exhibit and try again.")
+        }
+
+        return uniqueAnswers.join(", ")
+    }
+
+    const handleSubmit = async () => {
         setError(null)
+        let finalAnswer = ""
+        let isValidationError = false
 
         try {
+            if (isNysciQuest) {
+                isValidationError = true // Any error thrown in validation is a validation error
+                finalAnswer = validateNysciAnswers()
+                isValidationError = false // Passed validation
+            } else {
+                if (!answer.trim()) {
+                    isValidationError = true
+                    throw new Error("Please provide an answer before submitting.")
+                }
+                finalAnswer = answer.trim()
+            }
+
+            setSubmitting(true)
             const attendeeId = localStorage.getItem("expo_attendee_id")
             if (!attendeeId) throw new Error("Attendee ID not found")
 
@@ -47,12 +106,13 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
                 .insert({
                     attendee_id: attendeeId,
                     quest_id: quest.id,
-                    answer: answer,
+                    answer: finalAnswer,
                     points_earned: quest.points
                 })
 
             if (submitError) {
                 if (submitError.code === '23505') {
+                    isValidationError = true
                     throw new Error("You have already completed this quest!")
                 }
                 throw submitError
@@ -91,15 +151,24 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
             })
 
             setAnswer("")
+            setAnswers(["", "", ""])
             onSuccess(quest.id)
             onClose()
 
         } catch (err: any) {
-            console.error("Quest submission error:", err)
+            if (!isValidationError) {
+                console.error("Quest submission error:", err)
+            }
             setError(err.message || "Something went wrong. Please try again.")
         } finally {
             setSubmitting(false)
         }
+    }
+
+    const handleAnswerChange = (index: number, value: string) => {
+        const newAnswers = [...answers]
+        newAnswers[index] = value
+        setAnswers(newAnswers)
     }
 
     return (
@@ -117,17 +186,35 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
                 </div>
 
                 <div className="space-y-4">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-1">Your Answer</label>
-                    <Textarea
-                        placeholder="Type your answer here..."
-                        className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-neon-blue/50 text-white placeholder:text-gray-600"
-                        value={answer}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setAnswer(e.target.value)}
-                    />
-                    {error && <p className="text-xs text-red-400 px-1 font-medium">{error}</p>}
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-1">
+                        {isNysciQuest ? "List 3 Cityworks Themes" : "Your Answer"}
+                    </label>
+
+                    {isNysciQuest ? (
+                        <div className="space-y-3">
+                            {answers.map((val, idx) => (
+                                <Input
+                                    key={idx}
+                                    placeholder={`Theme ${idx + 1}...`}
+                                    className="bg-white/5 border-white/10 rounded-xl focus:ring-neon-blue/50 text-white placeholder:text-gray-600 h-12"
+                                    value={val}
+                                    onChange={(e) => handleAnswerChange(idx, e.target.value)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <Textarea
+                            placeholder="Type your answer here..."
+                            className="bg-white/5 border-white/10 rounded-2xl min-h-[120px] focus:ring-neon-blue/50 text-white placeholder:text-gray-600"
+                            value={answer}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setAnswer(e.target.value)}
+                        />
+                    )}
+
+                    {error && <p className="text-xs text-red-400 px-1 font-medium leading-relaxed">{error}</p>}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                     <Button
                         variant="ghost"
                         onClick={onClose}

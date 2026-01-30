@@ -86,12 +86,11 @@ export default function Dashboard() {
                 .eq('attendee_id', id)
 
             const formattedInterests = (interestsData || [])
-                .filter((s: any) => s.vendors?.type === 'vendor')
+                .filter((s: any) => s.vendors?.type === 'vendor' && s.vendors.vendor_info && s.vendors.vendor_info.length > 0)
                 .map((s: any) => ({
                     ...s.vendors.vendor_info[0],
                     scanned_at: s.created_at
                 }))
-                .filter(v => v !== undefined)
 
             setInterests(formattedInterests)
             setLoading(false)
@@ -141,7 +140,7 @@ export default function Dashboard() {
                             {attendee?.first_name} <span className="w-2 h-2 rounded-full bg-neon-green"></span>
                         </h2>
                         {attendee?.attendee_number && (
-                            <div className="inline-flex items-center gap-2 px-2 py-0.5 mt-2 rounded-full bg-neon-purple/10 border border-neon-purple/30 text-[10px] font-mono text-neon-purple w-fit">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-neon-purple/10 border border-neon-purple/30 text-[15px] font-mono font-bold text-neon-purple w-fit">
                                 {attendee.attendee_number}
                             </div>
                         )}
@@ -186,40 +185,43 @@ export default function Dashboard() {
                     </div>
 
                     {/* Points Card */}
-                    <Card className="bg-gradient-to-br from-card to-secondary/50 border-white/5 relative overflow-hidden rounded-3xl">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Card className="glass-card bg-gradient-to-br from-card/80 to-secondary/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                             <Trophy className="w-32 h-32" />
                         </div>
                         <CardContent className="p-6">
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Total Experience Points</div>
-                            <div className="text-6xl font-black text-white mt-1 tracking-tighter">{stats.points}</div>
-                            <Link href="/leaderboard" className="text-[10px] text-neon-green mt-6 flex items-center gap-1 font-bold uppercase tracking-widest hover:underline">
-                                Global Ranking <ArrowRight className="w-3 h-3" />
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-1">Total Experience Points</div>
+                            <div className="text-6xl font-black text-white tracking-tighter leading-none">{stats.points}</div>
+                            <Link href="/leaderboard" className="inline-flex items-center gap-1.5 mt-8 px-3 py-1.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-bold uppercase tracking-widest hover:bg-neon-green/20 transition-colors border border-neon-green/20">
+                                View Global Ranking <ArrowRight className="w-3 h-3" />
                             </Link>
                         </CardContent>
                     </Card>
 
                     {/* Progress Section */}
-                    <div className="bg-white/5 rounded-3xl p-5 border border-white/5">
-                        <div className="flex justify-between text-[10px] mb-3 font-black uppercase tracking-widest">
+                    <div className="glass-card p-6 neon-border-blue">
+                        <div className="flex justify-between items-end text-[10px] mb-4 font-black uppercase tracking-[0.2em]">
                             <span className="text-muted-foreground">Vendor Connections</span>
-                            <span className={qualified ? "text-neon-green" : "text-muted-foreground"}>
-                                {stats.vendorVisits} / 5
+                            <span className={qualified ? "text-neon-green" : "text-neon-blue"}>
+                                {stats.vendorVisits} / 5 COMPLETE
                             </span>
                         </div>
-                        <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden mb-4">
                             <div
-                                className={`h-full ${qualified ? 'bg-neon-green shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-neon-blue shadow-[0_0_15px_rgba(59,130,246,0.5)]'} transition-all duration-1000`}
+                                className={`h-full ${qualified ? 'bg-neon-green shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-neon-blue shadow-[0_0_15px_rgba(59,130,246,0.4)]'} transition-all duration-1000 ease-out`}
                                 style={{ width: `${Math.min(100, (stats.vendorVisits / 5) * 100)}%` }}
                             />
                         </div>
                         {qualified ? (
-                            <p className="text-[10px] text-neon-green mt-3 flex items-center gap-2 font-black uppercase tracking-tight">
-                                <ClipboardCheck className="w-3.5 h-3.5" /> Sweepstakes Qualified
-                            </p>
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-neon-green/10 border border-neon-green/20">
+                                <ClipboardCheck className="w-4 h-4 text-neon-green" />
+                                <p className="text-[10px] text-neon-green font-black uppercase tracking-tight">
+                                    Sweepstakes Qualified
+                                </p>
+                            </div>
                         ) : (
-                            <p className="text-[10px] text-muted-foreground mt-3 font-medium">
-                                Visit {5 - stats.vendorVisits} more vendors to unlock grand prizes.
+                            <p className="text-[11px] text-muted-foreground leading-snug">
+                                Visit and scan <span className="text-white font-bold">{5 - stats.vendorVisits} more vendors</span> to qualify for grand prize drawings!
                             </p>
                         )}
                     </div>
@@ -247,30 +249,33 @@ export default function Dashboard() {
 
                     {/* My Interests Section */}
                     {interests.length > 0 && (
-                        <div className="pt-2">
-                            <h3 className="text-[10px] font-black mb-4 flex items-center gap-2 uppercase tracking-[0.2em] text-muted-foreground/50">
-                                <ClipboardCheck className="w-3.5 h-3.5 text-neon-blue" />
-                                My Network
-                            </h3>
+                        <div className="pt-4 space-y-4">
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-[10px] font-black flex items-center gap-2 uppercase tracking-[0.2em] text-muted-foreground">
+                                    <ClipboardCheck className="w-3.5 h-3.5 text-neon-blue" />
+                                    My Network
+                                </h3>
+                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-tighter">{interests.length} Scanned</span>
+                            </div>
                             <div className="grid gap-3">
                                 {interests.map((vendor, idx) => (
-                                    <Card key={idx} className="bg-white/5 border-white/10 rounded-2xl overflow-hidden active:scale-[0.98] transition-all">
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h4 className="font-bold text-white text-sm">{vendor.name}</h4>
+                                    <div key={idx} className="glass-card hover:border-white/20 transition-all active:scale-[0.99] group cursor-default">
+                                        <div className="p-5 flex flex-col gap-2">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <h4 className="font-bold text-white text-[15px] leading-tight group-hover:text-neon-blue transition-colors">{vendor.name}</h4>
                                                 {vendor.industry_category && (
-                                                    <span className="text-[8px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded-full border border-neon-purple/30 font-bold uppercase tracking-tighter">
+                                                    <span className="shrink-0 text-[8px] bg-neon-purple/10 text-neon-purple px-2 py-1 rounded-md border border-neon-purple/20 font-black uppercase tracking-[0.1em] h-fit">
                                                         {vendor.industry_category}
                                                     </span>
                                                 )}
                                             </div>
                                             {vendor.solution_overview && (
-                                                <p className="text-[11px] text-gray-400 mb-2 line-clamp-1 font-medium">
+                                                <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed font-medium">
                                                     {vendor.solution_overview}
                                                 </p>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
