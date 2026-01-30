@@ -35,7 +35,7 @@ export default function Home() {
       </div>
 
       <div className="max-w-md space-y-8 z-10">
-        <h1 className="text-5xl font-extrabold tracking-in-expand">
+        <h1 className="text-4xl xs:text-5xl sm:text-6xl font-extrabold tracking-in-expand leading-tight">
           <span className="bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
             Queens
           </span>

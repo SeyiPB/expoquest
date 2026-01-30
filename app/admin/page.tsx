@@ -50,6 +50,8 @@ interface Vendor {
     email: string | null
     industry_category: string | null
     description: string | null
+    solution_overview?: string
+    value_proposition?: string
     station_id: string | null
     station?: {
         id: string
@@ -94,7 +96,9 @@ export default function AdminPage() {
         primary_contact: "",
         email: "",
         industry_category: "",
-        description: ""
+        description: "",
+        solution_overview: "",
+        value_proposition: ""
     })
     const [addingVendor, setAddingVendor] = useState(false)
 
@@ -178,13 +182,15 @@ export default function AdminPage() {
                 primary_contact: newVendor.primary_contact || null,
                 email: newVendor.email || null,
                 industry_category: newVendor.industry_category || null,
-                description: newVendor.description || null
+                description: newVendor.description || null,
+                solution_overview: newVendor.solution_overview || null,
+                value_proposition: newVendor.value_proposition || null
             })
 
             if (vendorError) throw vendorError
 
             // Reset form and reload
-            setNewVendor({ name: "", primary_contact: "", email: "", industry_category: "", description: "" })
+            setNewVendor({ name: "", primary_contact: "", email: "", industry_category: "", description: "", solution_overview: "", value_proposition: "" })
             setShowAddVendor(false)
             loadData()
         } catch (err: any) {
@@ -388,21 +394,21 @@ export default function AdminPage() {
                                                 </div>
 
                                                 {/* Details Grid */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {/* Contact & Basic Info */}
                                                     <div className="space-y-3">
                                                         <h4 className="text-sm font-semibold text-neon-blue border-b border-neon-blue/30 pb-1">Contact Info</h4>
                                                         <div className="space-y-2 text-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <Mail className="w-4 h-4 text-muted-foreground" />
-                                                                <span>{a.email}</span>
+                                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                                <span className="truncate">{a.email}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                                <Building className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                                <span className="truncate">{a.organization || 'No organization'}</span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <Building className="w-4 h-4 text-muted-foreground" />
-                                                                <span>{a.organization || 'No organization'}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Tag className="w-4 h-4 text-muted-foreground" />
+                                                                <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
                                                                 <span>ZIP: {a.zip_code}</span>
                                                             </div>
                                                         </div>
@@ -411,7 +417,7 @@ export default function AdminPage() {
                                                         </p>
                                                         {a.opt_in_communications && (
                                                             <span className="inline-flex items-center gap-1 text-xs text-neon-green">
-                                                                <CheckCircle className="w-3 h-3" /> Opted in for communications
+                                                                <CheckCircle className="w-3 h-3" /> Opted in
                                                             </span>
                                                         )}
                                                     </div>
@@ -601,6 +607,24 @@ export default function AdminPage() {
                                                 onChange={e => setNewVendor({ ...newVendor, description: e.target.value })}
                                             />
                                         </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label htmlFor="vendor-solution">Solution Overview</Label>
+                                            <Input
+                                                id="vendor-solution"
+                                                placeholder="Brief overview of the solution"
+                                                value={newVendor.solution_overview}
+                                                onChange={e => setNewVendor({ ...newVendor, solution_overview: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label htmlFor="vendor-value">Value Proposition</Label>
+                                            <Input
+                                                id="vendor-value"
+                                                placeholder="Key value proposition"
+                                                value={newVendor.value_proposition}
+                                                onChange={e => setNewVendor({ ...newVendor, value_proposition: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="flex gap-2 mt-4">
                                         <Button onClick={addVendor} disabled={addingVendor} className="bg-neon-green hover:bg-neon-green/80 text-black">
@@ -738,7 +762,7 @@ export default function AdminPage() {
                         <h2 className="text-xl font-semibold">Reports & Analytics</h2>
 
                         {/* Summary Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <Card className="bg-gradient-to-br from-neon-blue/20 to-neon-blue/5 border-neon-blue/30">
                                 <CardContent className="p-4 text-center">
                                     <Users className="w-8 h-8 mx-auto text-neon-blue mb-2" />

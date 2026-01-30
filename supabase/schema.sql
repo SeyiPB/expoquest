@@ -239,3 +239,8 @@ CREATE TRIGGER set_attendee_number
 BEFORE INSERT ON public.attendees
 FOR EACH ROW
 EXECUTE FUNCTION generate_attendee_number();
+-- Add solution_overview and value_proposition to vendors table
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS solution_overview text;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS value_proposition text;
+-- Add media_consent to attendees table
+ALTER TABLE public.attendees ADD COLUMN IF NOT EXISTS agreed_to_media_release boolean not null default false;

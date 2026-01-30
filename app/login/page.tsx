@@ -78,14 +78,14 @@ export default function LoginPage() {
                 </Link>
 
                 <Card className="bg-card/80 backdrop-blur-sm border-neon-blue/30">
-                    <CardHeader className="text-center pb-2">
-                        <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 flex items-center justify-center mb-4 border border-neon-purple/50">
-                            <Mail className="w-8 h-8 text-neon-purple" />
+                    <CardHeader className="text-center pb-2 p-4 sm:p-6">
+                        <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 flex items-center justify-center mb-4 border border-neon-purple/50">
+                            <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-neon-purple" />
                         </div>
-                        <CardTitle className="text-2xl bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
+                        <CardTitle className="text-xl sm:text-2xl bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
                             Welcome Back
                         </CardTitle>
-                        <CardDescription className="text-muted-foreground">
+                        <CardDescription className="text-xs sm:text-sm text-muted-foreground">
                             Enter your email to resume your session
                         </CardDescription>
                     </CardHeader>

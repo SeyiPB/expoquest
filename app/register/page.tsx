@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, ArrowRight, ArrowLeft, User, Briefcase, Sparkles, CheckCircle2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { Modal } from "@/components/ui/modal"
 
 const STEPS = [
     { id: 1, title: "Personal Info", icon: User },
@@ -22,6 +23,7 @@ export default function RegisterPage() {
     const [currentStep, setCurrentStep] = useState(1)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [showMediaModal, setShowMediaModal] = useState(false)
 
     const [formData, setFormData] = useState({
         first_name: "",
@@ -36,6 +38,7 @@ export default function RegisterPage() {
         digital_skill_level: "",
         reason_for_attending: "",
         opt_in_communications: false,
+        agreed_to_media_release: false,
         confidence_tech_access_pre: "",
         clarity_tech_pathways_pre: ""
     })
@@ -83,6 +86,10 @@ export default function RegisterPage() {
             case 3:
                 if (!formData.tech_access || !formData.digital_skill_level || !formData.confidence_tech_access_pre || !formData.clarity_tech_pathways_pre) {
                     setError("Please fill in all required fields.")
+                    return false
+                }
+                if (!formData.agreed_to_media_release) {
+                    setError("You must agree to the Media Release & Photography Notice to continue.")
                     return false
                 }
                 return true
@@ -177,34 +184,34 @@ export default function RegisterPage() {
 
             <div className="w-full max-w-lg">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
+                <div className="text-center mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
                         Queens Expo
                     </h1>
-                    <p className="text-muted-foreground mt-1">Complete your registration</p>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Complete your registration</p>
                 </div>
 
                 {/* Progress Indicator */}
-                <div className="flex items-center justify-between mb-8 px-4">
+                <div className="flex items-center justify-between mb-8 px-0 sm:px-4">
                     {STEPS.map((step, index) => (
-                        <div key={step.id} className="flex items-center">
-                            <div className="flex flex-col items-center">
+                        <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                            <div className="flex flex-col items-center flex-1">
                                 <div
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${currentStep > step.id
-                                            ? "bg-neon-green border-neon-green text-black"
-                                            : currentStep === step.id
-                                                ? "bg-neon-blue/20 border-neon-blue text-neon-blue"
-                                                : "bg-gray-800 border-gray-600 text-gray-500"
+                                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${currentStep > step.id
+                                        ? "bg-neon-green border-neon-green text-black"
+                                        : currentStep === step.id
+                                            ? "bg-neon-blue/20 border-neon-blue text-neon-blue"
+                                            : "bg-gray-800 border-gray-600 text-gray-500"
                                         }`}
                                 >
                                     {currentStep > step.id ? (
-                                        <CheckCircle2 className="w-6 h-6" />
+                                        <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
                                     ) : (
-                                        <step.icon className="w-5 h-5" />
+                                        <step.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                                     )}
                                 </div>
                                 <span
-                                    className={`text-xs mt-2 font-medium ${currentStep >= step.id ? "text-white" : "text-gray-500"
+                                    className={`text-[10px] sm:text-xs mt-2 font-medium text-center ${currentStep >= step.id ? "text-white" : "text-gray-500"
                                         }`}
                                 >
                                     {step.title}
@@ -212,7 +219,7 @@ export default function RegisterPage() {
                             </div>
                             {index < STEPS.length - 1 && (
                                 <div
-                                    className={`w-16 h-0.5 mx-2 -mt-6 transition-all duration-300 ${currentStep > step.id ? "bg-neon-green" : "bg-gray-700"
+                                    className={`flex-1 h-0.5 mx-1 sm:mx-2 -mt-7 sm:-mt-6 transition-all duration-300 ${currentStep > step.id ? "bg-neon-green" : "bg-gray-700"
                                         }`}
                                 />
                             )}
@@ -221,7 +228,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Form Card */}
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-6 shadow-2xl">
                     <AnimatePresence mode="wait" custom={currentStep}>
                         <motion.div
                             key={currentStep}
@@ -236,7 +243,7 @@ export default function RegisterPage() {
                             {currentStep === 1 && (
                                 <div className="space-y-5">
                                     <h2 className="text-xl font-bold mb-4">Personal Information</h2>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="first_name">First Name *</Label>
                                             <Input
@@ -317,8 +324,8 @@ export default function RegisterPage() {
                                                         type="button"
                                                         onClick={() => handleMultiSelect("attendee_type", type)}
                                                         className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${formData.attendee_type.includes(type)
-                                                                ? "bg-neon-purple text-white border-neon-purple shadow-lg shadow-neon-purple/30"
-                                                                : "bg-white/5 hover:bg-white/10 border-white/20"
+                                                            ? "bg-neon-purple text-white border-neon-purple shadow-lg shadow-neon-purple/30"
+                                                            : "bg-white/5 hover:bg-white/10 border-white/20"
                                                             }`}
                                                     >
                                                         {type}
@@ -337,8 +344,8 @@ export default function RegisterPage() {
                                                         type="button"
                                                         onClick={() => handleMultiSelect("interests", item)}
                                                         className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${formData.interests.includes(item)
-                                                                ? "bg-neon-blue text-black border-neon-blue shadow-lg shadow-neon-blue/30"
-                                                                : "bg-white/5 hover:bg-white/10 border-white/20"
+                                                            ? "bg-neon-blue text-black border-neon-blue shadow-lg shadow-neon-blue/30"
+                                                            : "bg-white/5 hover:bg-white/10 border-white/20"
                                                             }`}
                                                     >
                                                         {item}
@@ -441,8 +448,58 @@ export default function RegisterPage() {
                                             I'd like to receive info about future opportunities.
                                         </Label>
                                     </div>
+                                    <div className="flex items-start space-x-2 pt-2">
+                                        <Checkbox
+                                            id="agreed_to_media_release"
+                                            checked={formData.agreed_to_media_release}
+                                            onCheckedChange={(checked: boolean) =>
+                                                setFormData(prev => ({ ...prev, agreed_to_media_release: checked }))
+                                            }
+                                            required
+                                        />
+                                        <Label htmlFor="agreed_to_media_release" className="text-sm text-muted-foreground leading-tight">
+                                            I agree to the{" "}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowMediaModal(true)}
+                                                className="text-neon-blue hover:underline font-semibold"
+                                            >
+                                                Media Release &amp; Photography Notice
+                                            </button>
+                                            *
+                                        </Label>
+                                    </div>
                                 </div>
                             )}
+
+                            <Modal
+                                isOpen={showMediaModal}
+                                onClose={() => setShowMediaModal(false)}
+                                title="Media Release & Photography Notice"
+                            >
+                                <div className="space-y-4 text-sm text-gray-300">
+                                    <p>
+                                        By entering the Queens Tech &amp; Career Expo, you acknowledge and agree that you may be photographed, filmed, or recorded.
+                                    </p>
+                                    <p>
+                                        These images and recordings may be used by the Queens Borough President's Office, event partners, and authorized media for promotional, marketing, educational, and documentation purposes across print, digital, social media, and broadcast platforms, without compensation.
+                                    </p>
+                                    <p>
+                                        Your presence at the event constitutes your consent to such use.
+                                    </p>
+                                    <div className="pt-4 flex justify-end">
+                                        <Button
+                                            onClick={() => {
+                                                setFormData(prev => ({ ...prev, agreed_to_media_release: true }));
+                                                setShowMediaModal(false);
+                                            }}
+                                            className="bg-neon-blue text-black font-semibold hover:bg-neon-blue/90"
+                                        >
+                                            I Agree
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Modal>
                         </motion.div>
                     </AnimatePresence>
 
