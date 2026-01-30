@@ -55,7 +55,7 @@ export default function CheckInPage() {
                 // Create a default event if none exists
                 const { data: newEvent, error: createError } = await supabase
                     .from('events')
-                    .insert({ name: 'ExpoQuest Demo' })
+                    .insert({ name: 'Queens Expo Demo' })
                     .select()
                     .single()
 

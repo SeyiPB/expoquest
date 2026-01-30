@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Queens Tech & Career Expo App",
-  description: "The ultimate event engagement companion for the Queens Tech & Career Expo. Scan, earn, and win.",
+  title: "Queens Expo",
+  description: "The ultimate event engagement companion for the Queens Expo. Scan, earn, and win.",
 };
 
 export const viewport = {

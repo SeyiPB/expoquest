@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Trophy, QrCode, ClipboardCheck, LayoutGrid } from "lucide-react"
+import { Home, Trophy, QrCode, ClipboardCheck, Map as MapIcon } from "lucide-react"
 
 export function MobileNav() {
     const pathname = usePathname()
@@ -14,9 +14,9 @@ export function MobileNav() {
 
     const navItems = [
         { label: "Home", icon: Home, href: "/dashboard" },
-        { label: "Bingo", icon: LayoutGrid, href: "/bingo" },
+        { label: "Quests", icon: MapIcon, href: "/bingo" },
         { label: "Scan", icon: QrCode, href: "/scan", primary: true },
-        { label: "Ranks", icon: Trophy, href: "/leaderboard" },
+        { label: "Leaderboard", icon: Trophy, href: "/leaderboard" },
         { label: "Review", icon: ClipboardCheck, href: "/reflection" },
     ]
 
