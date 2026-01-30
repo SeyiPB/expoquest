@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { MobileNav } from "@/components/MobileNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,16 @@ export const metadata: Metadata = {
   description: "The ultimate event engagement companion for the Queens Tech & Career Expo. Scan, earn, and win.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0a0e1a", // Deep blue/black to match background
+};
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,6 +40,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <MobileNav />
       </body>
     </html>
   );
