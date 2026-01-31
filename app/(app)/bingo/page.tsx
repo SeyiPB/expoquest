@@ -48,14 +48,14 @@ export default function BingoPage() {
         {
             id: 'q5',
             title: "Character Collector",
-            description: "Witness the BP character reveal during Hiphop Gamer's remarks and describe one unique feature of the revealed character.",
+            description: "Witness the BP character reveal during Hiphop Gamer's remarks and describe 3 unique features of the revealed character.",
             points: 50,
             category: "Engagement"
         },
         {
             id: 'q6',
             title: "NYSCI Cityworks Challenge",
-            description: "List at least three of the main themes of Cityworks?",
+            description: "List 3 of the main themes of Cityworks.",
             points: 20,
             category: "Sponsor Scavenger"
         }

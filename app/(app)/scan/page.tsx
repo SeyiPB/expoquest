@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, ArrowLeft, CheckCircle2, XCircle, Info, ThumbsUp } from "lucide-react"
 import confetti from "canvas-confetti"
 import { motion, AnimatePresence } from "framer-motion"
+import { DailyQuestionModal } from "@/components/DailyQuestionModal"
 
 export default function ScanPage() {
     const router = useRouter()
@@ -18,6 +19,7 @@ export default function ScanPage() {
     const [result, setResult] = useState<{ points?: number; newTotal?: number } | null>(null)
     const [stationData, setStationData] = useState<any>(null)
     const [attendeeId, setAttendeeId] = useState<string | null>(null)
+    const [showDailyModal, setShowDailyModal] = useState(false)
 
     useEffect(() => {
         const id = localStorage.getItem("expo_attendee_id")
@@ -42,10 +44,16 @@ export default function ScanPage() {
                 stationId = parsed.s || parsed.station_id || rawValue
             } catch { }
 
+            if (stationId === "daily_divide" || stationId === "daily-question") {
+                setShowDailyModal(true)
+                setProcessing(false)
+                return
+            }
+
             // Validate UUID
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
             if (!uuidRegex.test(stationId)) {
-                throw new Error("Invalid QR code format")
+                throw new Error("Scan a valid QR code")
             }
 
             // Fetch station info
@@ -58,7 +66,7 @@ export default function ScanPage() {
                 .eq('id', stationId)
                 .single()
 
-            if (sError || !station) throw new Error("Station not found")
+            if (sError || !station) throw new Error("Scan a valid QR code")
 
             if (station.type === 'vendor' && station.vendor && station.vendor.length > 0) {
                 setStationData({ ...station, vendor: station.vendor[0] })
@@ -90,7 +98,7 @@ export default function ScanPage() {
                 setResult({ points: data.points_earned, newTotal: data.new_total })
                 setStep('success')
             } else {
-                throw new Error(data.message || "Scan failed")
+                throw new Error(data.message || "Scan a valid QR code")
             }
         } catch (err: any) {
             setErrorMsg(err.message || "Failed to record scan")
@@ -263,7 +271,7 @@ export default function ScanPage() {
                                 <XCircle className="w-10 h-10 text-red-500" />
                             </div>
                             <div className="space-y-2">
-                                <h2 className="text-2xl font-bold text-white tracking-tight">Scan Failed</h2>
+                                <h2 className="text-2xl font-bold text-white tracking-tight">Wrong QR code</h2>
                                 <p className="text-muted-foreground text-sm">{errorMsg}</p>
                             </div>
                             <Button onClick={() => setStep('scan')} className="w-full h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold">
@@ -273,6 +281,14 @@ export default function ScanPage() {
                     )}
                 </AnimatePresence>
             </main>
+            <DailyQuestionModal
+                isOpen={showDailyModal}
+                onClose={() => setShowDailyModal(false)}
+                onSuccess={(pts) => {
+                    setResult({ points: pts })
+                    setStep('success')
+                }}
+            />
         </div>
     )
 }

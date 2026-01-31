@@ -4,17 +4,26 @@ import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { QRCodeSVG } from "qrcode.react"
 import {
     Users, Store, Trophy, BarChart3, Plus, Download, Search,
     Mail, Phone, Building, Tag, ChevronDown, ChevronUp, RefreshCw,
-    Medal, Star, Zap, CheckCircle, AlertCircle, User
+    Medal, Star, Zap, CheckCircle, AlertCircle, User, Sparkles, ClipboardList
 } from "lucide-react"
 
 // Types
-type Tab = 'users' | 'vendors' | 'leaderboard' | 'reports'
+type Tab = 'users' | 'vendors' | 'leaderboard' | 'answers' | 'reports'
 
 interface Attendee {
     id: string
@@ -68,6 +77,20 @@ interface LeaderboardEntry {
     vendor_visits: number
 }
 
+interface Submission {
+    id: string
+    attendee_id: string
+    quest_id: string
+    answer: string
+    points_earned: number
+    created_at: string
+    attendee: {
+        first_name: string
+        last_name: string
+        email: string
+    }
+}
+
 export default function AdminPage() {
     const supabase = createClient()
     const [activeTab, setActiveTab] = useState<Tab>('users')
@@ -78,6 +101,7 @@ export default function AdminPage() {
     const [attendees, setAttendees] = useState<Attendee[]>([])
     const [vendors, setVendors] = useState<Vendor[]>([])
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+    const [submissions, setSubmissions] = useState<Submission[]>([])
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalVendors: 0,
@@ -88,6 +112,7 @@ export default function AdminPage() {
     // Search/filter
     const [userSearch, setUserSearch] = useState("")
     const [vendorSearch, setVendorSearch] = useState("")
+    const [answerSearch, setAnswerSearch] = useState("")
 
     // Add vendor form
     const [showAddVendor, setShowAddVendor] = useState(false)
@@ -118,16 +143,18 @@ export default function AdminPage() {
                 setEventId(events[0].id)
 
                 // Load all data in parallel
-                const [attendeesRes, vendorsRes, leaderboardRes, scansRes] = await Promise.all([
+                const [attendeesRes, vendorsRes, leaderboardRes, scansRes, subsRes] = await Promise.all([
                     supabase.from('attendees').select('*').order('created_at', { ascending: false }),
                     supabase.from('vendors').select('*, station:stations(id, name, points_base)').order('name'),
                     supabase.from('leaderboard').select('*').order('total_points', { ascending: false }).limit(50),
-                    supabase.from('scans').select('id', { count: 'exact', head: true })
+                    supabase.from('scans').select('id', { count: 'exact', head: true }),
+                    supabase.from('quest_submissions').select('*, attendee:attendees(first_name, last_name, email)').order('created_at', { ascending: false })
                 ])
 
                 if (attendeesRes.data) setAttendees(attendeesRes.data)
                 if (vendorsRes.data) setVendors(vendorsRes.data)
                 if (leaderboardRes.data) setLeaderboard(leaderboardRes.data)
+                if (subsRes.data) setSubmissions(subsRes.data as any)
 
                 // Calculate stats
                 const totalPoints = attendeesRes.data?.reduce((sum, a) => sum + (a.total_points || 0), 0) || 0
@@ -201,7 +228,8 @@ export default function AdminPage() {
     }
 
     const downloadQRCode = (vendorName: string, stationId: string) => {
-        const svg = document.getElementById(`qr-${stationId}`)
+        const id = vendorName === "Daily_Question" ? "qr-daily-question" : `qr-${stationId}`
+        const svg = document.getElementById(id)
         if (!svg) return
 
         const svgData = new XMLSerializer().serializeToString(svg)
@@ -237,11 +265,45 @@ export default function AdminPage() {
         `${v.name} ${v.industry_category || ''} ${v.email || ''}`.toLowerCase().includes(vendorSearch.toLowerCase())
     )
 
+    const questTitles: Record<string, string> = {
+        'q1': 'Welcome Session Hunt',
+        'q2': 'Sponsor Scavenger',
+        'q3': 'Mentorship Master',
+        'q4': 'Tech Explorer',
+        'q5': 'Character Collector',
+        'q6': 'NYSCI Cityworks Challenge',
+        'daily_divide': 'Daily Question: Digital Divide'
+    }
+
+    const exportSubmissionsCSV = () => {
+        const headers = ["Attendee Name", "Email", "Quest", "Response", "Points", "Time"]
+        const csvContent = [
+            headers.join(","),
+            ...submissions.map(s => {
+                const name = `${s.attendee?.first_name || 'Unknown'} ${s.attendee?.last_name || ''}`.trim()
+                const quest = questTitles[s.quest_id] || s.quest_id
+                const answer = `"${s.answer.replace(/"/g, '""')}"` // Escape quotes
+                const time = new Date(s.created_at).toLocaleString()
+                return [name, s.attendee?.email, quest, answer, s.points_earned, time].join(",")
+            })
+        ].join("\n")
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement("a")
+        const url = URL.createObjectURL(blob)
+        link.setAttribute("href", url)
+        link.setAttribute("download", `expo_answers_${new Date().toISOString().split('T')[0]}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
     // Tab navigation
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
         { id: 'vendors', label: 'Vendors', icon: <Store className="w-4 h-4" /> },
         { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
+        { id: 'answers', label: 'Answers', icon: <ClipboardList className="w-4 h-4" /> },
         { id: 'reports', label: 'Reports', icon: <BarChart3 className="w-4 h-4" /> }
     ]
 
@@ -636,6 +698,51 @@ export default function AdminPage() {
                             </Card>
                         )}
 
+                        {/* Daily Question Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                            <Card className="bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 border-neon-purple/30">
+                                <CardHeader>
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-neon-purple/20 p-2 rounded-lg">
+                                            <Sparkles className="w-5 h-5 text-neon-purple" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">Daily Question</CardTitle>
+                                            <CardDescription>Special station for the daily survey</CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex gap-6 items-center">
+                                        <div className="bg-white p-3 rounded-2xl shrink-0">
+                                            <QRCodeSVG
+                                                id="qr-daily-question"
+                                                value={JSON.stringify({ s: "daily_divide" })}
+                                                size={120}
+                                                level="H"
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Question</p>
+                                                <p className="text-sm font-medium text-white italic">"How do we conquer the digital divide?"</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Points</p>
+                                                <p className="text-sm font-bold text-neon-green">100 PTS</p>
+                                            </div>
+                                            <Button
+                                                onClick={() => downloadQRCode("Daily_Question", "daily-question")}
+                                                className="w-full bg-white text-black hover:bg-white/90 font-bold"
+                                            >
+                                                <Download className="w-4 h-4 mr-2" /> Download High-Res
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
                         {/* Vendors Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredVendors.map(vendor => (
@@ -752,6 +859,83 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ANSWERS TAB */}
+                {activeTab === 'answers' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-semibold">Quest Responses</h2>
+                            <Button onClick={exportSubmissionsCSV} variant="outline" className="border-white/10 hover:bg-white/5">
+                                <Download className="w-4 h-4 mr-2" /> Export CSV
+                            </Button>
+                        </div>
+
+                        <div className="relative">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by name, email, or response content..."
+                                className="pl-9 bg-white/5 border-white/10"
+                                value={answerSearch}
+                                onChange={(e) => setAnswerSearch(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 overflow-hidden">
+                            <Table>
+                                <TableHeader className="bg-white/5">
+                                    <TableRow className="border-white/10 hover:bg-transparent">
+                                        <TableHead className="text-white">Attendee</TableHead>
+                                        <TableHead className="text-white">Quest</TableHead>
+                                        <TableHead className="text-white">Response</TableHead>
+                                        <TableHead className="text-white">Time</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {submissions
+                                        .filter(s => {
+                                            const search = answerSearch.toLowerCase()
+                                            const name = `${s.attendee?.first_name} ${s.attendee?.last_name}`.toLowerCase()
+                                            return name.includes(search) ||
+                                                s.attendee?.email?.toLowerCase().includes(search) ||
+                                                s.answer.toLowerCase().includes(search)
+                                        })
+                                        .map((sub) => (
+                                            <TableRow key={sub.id} className="border-white/5 hover:bg-white/5">
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-medium text-white">
+                                                            {sub.attendee?.first_name} {sub.attendee?.last_name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">{sub.attendee?.email}</p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className="text-xs bg-white/10 px-2 py-1 rounded border border-white/10">
+                                                        {questTitles[sub.quest_id] || sub.quest_id}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="max-w-md">
+                                                    <p className="text-sm text-gray-300 line-clamp-2 hover:line-clamp-none transition-all cursor-help" title={sub.answer}>
+                                                        {sub.answer}
+                                                    </p>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                                    {new Date(sub.created_at).toLocaleString()}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    {submissions.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                No answers submitted yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </div>
                     </div>
                 )}

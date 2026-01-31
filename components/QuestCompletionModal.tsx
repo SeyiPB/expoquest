@@ -32,6 +32,41 @@ const CITYWORKS_THEMES = [
     "integrated systems"
 ]
 
+const CHARACTER_FEATURES = [
+    "gold chain",
+    "red glasses",
+    "glasses",
+    "durag",
+    "fat",
+    "orc",
+    "mutant",
+    "socks",
+    "elf ears",
+    "fangs",
+    "84",
+    "white elbow pads",
+    "gold chain necklace",
+    "large muscular orc-like humanoid with a tanky build",
+    "prominent upward tusks",
+    "stern aggressive expression",
+    "red-tinted sunglasses",
+    "red bandana headwrap",
+    "massive spiked shoulder pads with skull details",
+    "heavy metal chains across the shoulders",
+    "black football jersey with the number 84",
+    "red football pants",
+    "reinforced football-style padding",
+    "thick gold chain necklace",
+    "spiked wrist bracers",
+    "skull-themed knee guards",
+    "white arm wrap on one arm",
+    "red-and-white cleats",
+    "metal studs and spikes throughout the armor",
+    "fantasy and american football hybrid style",
+    "brute enforcer power-player archetype",
+    "intimidating boss-like presence"
+]
+
 export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: QuestCompletionModalProps) {
     const [answer, setAnswer] = useState("")
     const [answers, setAnswers] = useState(["", "", ""])
@@ -51,6 +86,8 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
     if (!quest) return null
 
     const isNysciQuest = quest.id === 'q6'
+    const isCharacterQuest = quest.id === 'q5'
+    const isMultiInput = isNysciQuest || isCharacterQuest
 
     const validateNysciAnswers = () => {
         // Clean and normalize answers
@@ -78,6 +115,29 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
         return uniqueAnswers.join(", ")
     }
 
+    const validateCharacterAnswers = () => {
+        const cleanedAnswers = answers.map(a =>
+            a.trim().toLowerCase().replace(/\s+/g, ' ')
+        ).filter(a => a !== "")
+
+        const uniqueAnswers = Array.from(new Set(cleanedAnswers))
+
+        if (uniqueAnswers.length < 3) {
+            throw new Error("Please provide 3 unique features of the BP character.")
+        }
+
+        const validMatches = uniqueAnswers.filter(a => {
+            return CHARACTER_FEATURES.includes(a) ||
+                CHARACTER_FEATURES.some(feat => feat.includes(a) && a.length > 3)
+        })
+
+        if (validMatches.length < 3) {
+            throw new Error("Some of your answers don't match the character's features. Please look closer and try again.")
+        }
+
+        return uniqueAnswers.join(", ")
+    }
+
     const handleSubmit = async () => {
         setError(null)
         let finalAnswer = ""
@@ -85,10 +145,28 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
 
         try {
             if (isNysciQuest) {
-                isValidationError = true // Any error thrown in validation is a validation error
+                isValidationError = true
                 finalAnswer = validateNysciAnswers()
-                isValidationError = false // Passed validation
+                isValidationError = false
+            } else if (isCharacterQuest) {
+                isValidationError = true
+                finalAnswer = validateCharacterAnswers()
+                isValidationError = false
             } else {
+                const cleanedAnswer = answer.trim().toLowerCase()
+
+                if (quest.id === 'q1') {
+                    if (cleanedAnswer !== "danny rojas") {
+                        isValidationError = true
+                        throw new Error("Incorrect name. Please check the person who accepted the award and try again.")
+                    }
+                } else if (quest.id === 'q2') {
+                    if (cleanedAnswer !== "at&t") {
+                        isValidationError = true
+                        throw new Error("Incorrect organization. Please check the partner mentioned in the agenda.")
+                    }
+                }
+
                 if (!answer.trim()) {
                     isValidationError = true
                     throw new Error("Please provide an answer before submitting.")
@@ -187,21 +265,29 @@ export function QuestCompletionModal({ isOpen, onClose, quest, onSuccess }: Ques
 
                 <div className="space-y-4">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-1">
-                        {isNysciQuest ? "List 3 Cityworks Themes" : "Your Answer"}
+                        {isNysciQuest ? "List 3 Cityworks Themes" :
+                            isCharacterQuest ? "List 3 Character Features" : "Your Answer"}
                     </label>
 
-                    {isNysciQuest ? (
+                    {isMultiInput ? (
                         <div className="space-y-3">
                             {answers.map((val, idx) => (
                                 <Input
                                     key={idx}
-                                    placeholder={`Theme ${idx + 1}...`}
+                                    placeholder={isNysciQuest ? `Theme ${idx + 1}...` : `Feature ${idx + 1}...`}
                                     className="bg-white/5 border-white/10 rounded-xl focus:ring-neon-blue/50 text-white placeholder:text-gray-600 h-12"
                                     value={val}
                                     onChange={(e) => handleAnswerChange(idx, e.target.value)}
                                 />
                             ))}
                         </div>
+                    ) : quest.id === 'q1' || quest.id === 'q2' ? (
+                        <Input
+                            placeholder="Type your answer here..."
+                            className="bg-white/5 border-white/10 rounded-xl focus:ring-neon-blue/50 text-white placeholder:text-gray-600 h-12"
+                            value={answer}
+                            onChange={(e) => setAnswer(e.target.value)}
+                        />
                     ) : (
                         <Textarea
                             placeholder="Type your answer here..."

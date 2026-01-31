@@ -12,6 +12,7 @@ import { AgendaModal } from "@/components/AgendaModal"
 import { HackAIthonModal } from "@/components/HackAIthonModal"
 import { MentoringLoungeModal } from "@/components/MentoringLoungeModal"
 import { Calendar, Sparkles, Brain, Users } from "lucide-react"
+import { ProfileModal } from "@/components/ProfileModal"
 
 export default function Dashboard() {
     const router = useRouter()
@@ -24,6 +25,7 @@ export default function Dashboard() {
     const [showAgendaModal, setShowAgendaModal] = useState(false)
     const [showHackModal, setShowHackModal] = useState(false)
     const [showMentoringModal, setShowMentoringModal] = useState(false)
+    const [showProfileModal, setShowProfileModal] = useState(false)
 
     useEffect(() => {
         const id = localStorage.getItem("expo_attendee_id")
@@ -112,6 +114,7 @@ export default function Dashboard() {
             <AgendaModal isOpen={showAgendaModal} onClose={() => setShowAgendaModal(false)} />
             <HackAIthonModal isOpen={showHackModal} onClose={() => setShowHackModal(false)} />
             <MentoringLoungeModal isOpen={showMentoringModal} onClose={() => setShowMentoringModal(false)} />
+            <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} attendee={attendee} />
             <div className="min-h-screen bg-black text-foreground flex flex-col pb-24">
                 {/* Sticky Header */}
                 <header className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center">
@@ -140,9 +143,12 @@ export default function Dashboard() {
                             {attendee?.first_name} <span className="w-2 h-2 rounded-full bg-neon-green"></span>
                         </h2>
                         {attendee?.attendee_number && (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-neon-purple/10 border border-neon-purple/30 text-[15px] font-mono font-bold text-neon-purple w-fit">
+                            <button
+                                onClick={() => setShowProfileModal(true)}
+                                className="inline-flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-neon-purple/10 border border-neon-purple/30 text-[15px] font-mono font-bold text-neon-purple w-fit hover:bg-neon-purple/20 active:scale-95 transition-all cursor-pointer"
+                            >
                                 {attendee.attendee_number}
-                            </div>
+                            </button>
                         )}
                     </div>
 
@@ -193,7 +199,7 @@ export default function Dashboard() {
                             <div className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-black mb-1">Total Experience Points</div>
                             <div className="text-6xl font-black text-white tracking-tighter leading-none">{stats.points}</div>
                             <Link href="/leaderboard" className="inline-flex items-center gap-1.5 mt-8 px-3 py-1.5 rounded-full bg-neon-green/10 text-neon-green text-[10px] font-bold uppercase tracking-widest hover:bg-neon-green/20 transition-colors border border-neon-green/20">
-                                View Global Ranking <ArrowRight className="w-3 h-3" />
+                                View Leaderboard <ArrowRight className="w-3 h-3" />
                             </Link>
                         </CardContent>
                     </Card>
@@ -244,6 +250,15 @@ export default function Dashboard() {
                         >
                             <Calendar className="w-5 h-5 text-neon-teal" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Agenda</span>
+                        </Button>
+
+                        <Button
+                            onClick={() => router.push("/scan?type=daily")}
+                            variant="secondary"
+                            className="h-20 flex flex-col gap-1 bg-white/5 border-white/10 hover:bg-white/10 rounded-2xl active:scale-95 transition-all col-span-2"
+                        >
+                            <QrCode className="w-5 h-5 text-neon-purple" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Question for today?</span>
                         </Button>
                     </div>
 
