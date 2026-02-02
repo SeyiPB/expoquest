@@ -19,8 +19,11 @@ import { QRCodeSVG } from "qrcode.react"
 import {
     Users, Store, Trophy, BarChart3, Plus, Download, Search,
     Mail, Phone, Building, Tag, ChevronDown, ChevronUp, RefreshCw,
-    Medal, Star, Zap, CheckCircle, AlertCircle, User, Sparkles, ClipboardList
+    Medal, Star, Zap, CheckCircle, AlertCircle, User, Sparkles, ClipboardList,
+    FileSpreadsheet, FileText
 } from "lucide-react"
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // Types
 type Tab = 'users' | 'vendors' | 'leaderboard' | 'answers' | 'reports'
@@ -298,7 +301,104 @@ export default function AdminPage() {
         document.body.removeChild(link)
     }
 
-    // Tab navigation
+    const exportUsersCSV = () => {
+        const headers = [
+            "First Name", "Last Name", "Email", "Organization", "ZIP",
+            "Age Range", "Role", "Tech Access", "Skill Level",
+            "Total Points", "Wristband ID", "Check-in Time"
+        ]
+
+        const csvContent = [
+            headers.join(","),
+            ...attendees.map(a => {
+                const roles = (a.attendee_type || []).join(";")
+                const checkIn = new Date(a.created_at).toLocaleString()
+                const row = [
+                    a.first_name, a.last_name, a.email, a.organization || '', a.zip_code,
+                    a.age_range, roles, a.tech_access, a.digital_skill_level,
+                    a.total_points, a.wristband_id || '', checkIn
+                ]
+                return row.map(field => `"${String(field || '').replace(/"/g, '""')}"`).join(",")
+            })
+        ].join("\n")
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement("a")
+        const url = URL.createObjectURL(blob)
+        link.setAttribute("href", url)
+        link.setAttribute("download", `expo_attendees_${new Date().toISOString().split('T')[0]}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    const downloadReportPDF = () => {
+        const doc = new jsPDF()
+        const date = new Date().toLocaleDateString()
+
+        // Header
+        doc.setFontSize(20)
+        doc.setTextColor(40, 40, 40)
+        doc.text("Queens Tech & Career Expo 2026", 14, 22)
+
+        doc.setFontSize(12)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`Event Report - Generated on ${date}`, 14, 30)
+
+        // Summary Stats
+        doc.setFontSize(14)
+        doc.setTextColor(0, 0, 0)
+        doc.text("Executive Summary", 14, 45)
+
+        const summaryData = [
+            ['Total Registered Users', stats.totalUsers],
+            ['Total Vendors', stats.totalVendors],
+            ['Total Scans', stats.totalScans],
+            ['Total Points Distributed', stats.totalPoints.toLocaleString()]
+        ]
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Metric', 'Value']],
+            body: summaryData,
+            theme: 'striped',
+            headStyles: { fillColor: [66, 66, 66] }
+        })
+
+        // Qualification Status
+        const qualified = leaderboard.filter(e => e.vendor_visits >= 5).length
+        const notQualified = leaderboard.length - qualified
+
+        doc.text("Prize Qualification", 14, (doc as any).lastAutoTable.finalY + 15)
+
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Status', 'Count', 'Percentage']],
+            body: [
+                ['Qualified (5+ Visits)', qualified, `${((qualified / stats.totalUsers) * 100).toFixed(1)}%`],
+                ['In Progress', notQualified, `${((notQualified / stats.totalUsers) * 100).toFixed(1)}%`]
+            ],
+            theme: 'grid'
+        })
+
+        // Demographics - Age Ranges
+        const ageCounts: Record<string, number> = {}
+        attendees.forEach(a => {
+            if (a.age_range) ageCounts[a.age_range] = (ageCounts[a.age_range] || 0) + 1
+        })
+        const ageData = Object.entries(ageCounts).sort((a, b) => a[0].localeCompare(b[0]))
+
+        doc.text("Demographics: Age Ranges", 14, (doc as any).lastAutoTable.finalY + 15)
+
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Age Range', 'Count']],
+            body: ageData,
+            theme: 'striped'
+        })
+
+        doc.save(`expo_report_${date.replace(/\//g, '-')}.pdf`)
+    }
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
         { id: 'vendors', label: 'Vendors', icon: <Store className="w-4 h-4" /> },
@@ -378,14 +478,19 @@ export default function AdminPage() {
                     <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                             <h2 className="text-xl font-semibold">Registered Users ({stats.totalUsers})</h2>
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search users..."
-                                    value={userSearch}
-                                    onChange={e => setUserSearch(e.target.value)}
-                                    className="pl-10"
-                                />
+                            <div className="flex w-full sm:w-auto gap-2">
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search users..."
+                                        value={userSearch}
+                                        onChange={e => setUserSearch(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                <Button onClick={exportUsersCSV} variant="outline" className="border-white/10 hover:bg-white/5">
+                                    <FileSpreadsheet className="w-4 h-4 mr-2" /> Export CSV
+                                </Button>
                             </div>
                         </div>
 
@@ -943,7 +1048,12 @@ export default function AdminPage() {
                 {/* REPORTS TAB */}
                 {activeTab === 'reports' && (
                     <div className="space-y-6">
-                        <h2 className="text-xl font-semibold">Reports & Analytics</h2>
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-semibold">Reports & Analytics</h2>
+                            <Button onClick={downloadReportPDF} variant="outline" className="border-white/10 hover:bg-white/5">
+                                <FileText className="w-4 h-4 mr-2" /> Download PDF Report
+                            </Button>
+                        </div>
 
                         {/* Summary Stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
