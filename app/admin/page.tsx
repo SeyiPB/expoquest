@@ -20,13 +20,17 @@ import {
     Users, Store, Trophy, BarChart3, Plus, Download, Search,
     Mail, Phone, Building, Tag, ChevronDown, ChevronUp, RefreshCw,
     Medal, Star, Zap, CheckCircle, AlertCircle, User, Sparkles, ClipboardList,
-    FileSpreadsheet, FileText
+    FileSpreadsheet, FileText, MessageSquare
 } from "lucide-react"
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    LineChart, Line, PieChart, Pie, Cell
+} from 'recharts'
 
 // Types
-type Tab = 'users' | 'vendors' | 'leaderboard' | 'answers' | 'reports'
+type Tab = 'users' | 'vendors' | 'leaderboard' | 'answers' | 'reviews' | 'reports'
 
 interface Attendee {
     id: string
@@ -105,11 +109,14 @@ export default function AdminPage() {
     const [vendors, setVendors] = useState<Vendor[]>([])
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
     const [submissions, setSubmissions] = useState<Submission[]>([])
+    const [reviews, setReviews] = useState<Attendee[]>([])
+    const [scans, setScans] = useState<any[]>([])
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalVendors: 0,
         totalScans: 0,
-        totalPoints: 0
+        totalPoints: 0,
+        totalReviews: 0
     })
 
     // Search/filter
@@ -150,22 +157,28 @@ export default function AdminPage() {
                     supabase.from('attendees').select('*').order('created_at', { ascending: false }),
                     supabase.from('vendors').select('*, station:stations(id, name, points_base)').order('name'),
                     supabase.from('leaderboard').select('*').order('total_points', { ascending: false }).limit(50),
-                    supabase.from('scans').select('id', { count: 'exact', head: true }),
+                    supabase.from('scans').select('*'),
                     supabase.from('quest_submissions').select('*, attendee:attendees(first_name, last_name, email)').order('created_at', { ascending: false })
                 ])
 
                 if (attendeesRes.data) setAttendees(attendeesRes.data)
                 if (vendorsRes.data) setVendors(vendorsRes.data)
                 if (leaderboardRes.data) setLeaderboard(leaderboardRes.data)
+                if (scansRes.data) setScans(scansRes.data)
                 if (subsRes.data) setSubmissions(subsRes.data as any)
+
+                // Process Reviews
+                const reviewsList = attendeesRes.data?.filter(a => a.valuable_activity || a.confidence_tech_access_post) || []
+                setReviews(reviewsList)
 
                 // Calculate stats
                 const totalPoints = attendeesRes.data?.reduce((sum, a) => sum + (a.total_points || 0), 0) || 0
                 setStats({
                     totalUsers: attendeesRes.data?.length || 0,
                     totalVendors: vendorsRes.data?.length || 0,
-                    totalScans: scansRes.count || 0,
-                    totalPoints
+                    totalScans: scansRes.data?.length || 0,
+                    totalPoints,
+                    totalReviews: reviewsList.length
                 })
             }
         } catch (err) {
@@ -404,6 +417,7 @@ export default function AdminPage() {
         { id: 'vendors', label: 'Vendors', icon: <Store className="w-4 h-4" /> },
         { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
         { id: 'answers', label: 'Answers', icon: <ClipboardList className="w-4 h-4" /> },
+        { id: 'reviews', label: 'Reviews', icon: <MessageSquare className="w-4 h-4" /> },
         { id: 'reports', label: 'Reports', icon: <BarChart3 className="w-4 h-4" /> }
     ]
 
@@ -877,7 +891,13 @@ export default function AdminPage() {
 
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-semibold truncate">{vendor.name}</h3>
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <h3 className="font-semibold truncate">{vendor.name}</h3>
+                                                    <div className="flex items-center gap-1.5 bg-neon-green/10 text-neon-green px-2 py-0.5 rounded-full text-xs font-medium shrink-0" title="Total Scans">
+                                                        <Zap className="w-3 h-3" />
+                                                        {scans.filter(s => s.station_id === vendor.station_id).length}
+                                                    </div>
+                                                </div>
                                                 {vendor.industry_category && (
                                                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-neon-blue/20 text-neon-blue rounded-full mt-1">
                                                         <Tag className="w-3 h-3" /> {vendor.industry_category}
@@ -1045,6 +1065,54 @@ export default function AdminPage() {
                     </div>
                 )}
 
+                {/* REVIEWS TAB */}
+                {activeTab === 'reviews' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-semibold">Attendee Reflections ({reviews.length})</h2>
+                        </div>
+
+                        {reviews.length === 0 ? (
+                            <div className="text-center py-12 bg-white/5 rounded-xl border border-white/10">
+                                <p className="text-muted-foreground">No reviews submitted yet.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {reviews.map((review) => (
+                                    <Card key={review.id} className="bg-card/50 border-white/10">
+                                        <CardHeader>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <CardTitle className="text-base">{review.first_name} {review.last_name}</CardTitle>
+                                                    <CardDescription>{review.organization || "No Org"}</CardDescription>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground">Confidence</div>
+                                                    <div className="flex items-center gap-1 font-bold text-neon-green">
+                                                        <span>{review.confidence_tech_access_pre || '-'}</span>
+                                                        <span>→</span>
+                                                        <span>{review.confidence_tech_access_post || '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3 text-sm">
+                                            <div>
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">Most Valuable</p>
+                                                <p className="mt-1">{review.valuable_activity}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">Future Action</p>
+                                                <p className="mt-1">{review.future_action}</p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* REPORTS TAB */}
                 {activeTab === 'reports' && (
                     <div className="space-y-6">
@@ -1056,7 +1124,7 @@ export default function AdminPage() {
                         </div>
 
                         {/* Summary Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <Card className="bg-gradient-to-br from-neon-blue/20 to-neon-blue/5 border-neon-blue/30">
                                 <CardContent className="p-4 text-center">
                                     <Users className="w-8 h-8 mx-auto text-neon-blue mb-2" />
@@ -1085,100 +1153,282 @@ export default function AdminPage() {
                                     <p className="text-sm text-muted-foreground">Points Distributed</p>
                                 </CardContent>
                             </Card>
+                            <Card className="bg-gradient-to-br from-pink-500/20 to-pink-500/5 border-pink-500/30">
+                                <CardContent className="p-4 text-center">
+                                    <MessageSquare className="w-8 h-8 mx-auto text-pink-500 mb-2" />
+                                    <p className="text-3xl font-bold">{stats.totalReviews}</p>
+                                    <p className="text-sm text-muted-foreground">Reviews</p>
+                                </CardContent>
+                            </Card>
                         </div>
 
-                        {/* Demographics */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Attendee Demographics</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    {/* Attendee Types */}
-                                    <div>
-                                        <h4 className="font-medium mb-3">By Type</h4>
-                                        <div className="space-y-2">
-                                            {(() => {
-                                                const typeCounts: Record<string, number> = {}
-                                                attendees.forEach(a => {
-                                                    (a.attendee_type || []).forEach((t: string) => {
-                                                        typeCounts[t] = (typeCounts[t] || 0) + 1
+                        {/* CHARTS ROW 1: Vendor Stats & Engagement */}
+                        <div className="grid lg:grid-cols-2 gap-6">
+                            {/* Vendor Engagement Stats */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Vendor Engagement</CardTitle>
+                                    <CardDescription>Top performed vendors by scans</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {/* Calculate Vendor Stats */}
+                                    {(() => {
+                                        const vendorScans: Record<string, number> = {}
+                                        scans.forEach(s => {
+                                            const v = vendors.find(v => v.station_id === s.station_id)
+                                            if (v) vendorScans[v.name] = (vendorScans[v.name] || 0) + 1
+                                        })
+                                        const sortedVendors = Object.entries(vendorScans)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .slice(0, 5)
+                                            .map(([name, count]) => ({ name, count }))
+
+                                        return (
+                                            <div className="h-[300px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={sortedVendors} layout="vertical" margin={{ left: 20 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                                        <XAxis type="number" stroke="#888" fontSize={12} />
+                                                        <YAxis dataKey="name" type="category" width={100} stroke="#888" fontSize={12} />
+                                                        <Tooltip
+                                                            contentStyle={{ backgroundColor: '#111', borderColor: '#333' }}
+                                                            itemStyle={{ color: '#fff' }}
+                                                        />
+                                                        <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        )
+                                    })()}
+                                </CardContent>
+                            </Card>
+
+                            {/* Tech Skill Distribution */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Tech Skill Distribution</CardTitle>
+                                    <CardDescription>Self-reported skill levels</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {(() => {
+                                        const skills: Record<string, number> = {}
+                                        attendees.forEach(a => {
+                                            if (a.digital_skill_level) skills[a.digital_skill_level] = (skills[a.digital_skill_level] || 0) + 1
+                                        })
+                                        const data = Object.entries(skills).map(([name, value]) => ({ name, value }))
+                                        const COLORS = ['#3b82f6', '#10b981', '#a855f7', '#f59e0b']
+
+                                        return (
+                                            <div className="h-[300px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={data}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            labelLine={false}
+                                                            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                                                            outerRadius={100}
+                                                            fill="#8884d8"
+                                                            dataKey="value"
+                                                        >
+                                                            {data.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        )
+                                    })()}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* CHARTS ROW 2: Impact Analysis */}
+                        <div className="grid lg:grid-cols-2 gap-6">
+                            {/* Confidence Impact */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Confidence Impact</CardTitle>
+                                    <CardDescription>Pre vs Post Event Tech Confidence</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {(() => {
+                                        let preSum = 0, postSum = 0, count = 0
+                                        attendees.forEach(a => {
+                                            if (a.confidence_tech_access_pre && a.confidence_tech_access_post) {
+                                                preSum += a.confidence_tech_access_pre
+                                                postSum += a.confidence_tech_access_post
+                                                count++
+                                            }
+                                        })
+                                        const data = [
+                                            { name: 'Pre-Event', score: count ? (preSum / count).toFixed(1) : 0 },
+                                            { name: 'Post-Event', score: count ? (postSum / count).toFixed(1) : 0 }
+                                        ]
+
+                                        return (
+                                            <div className="h-[300px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={data}>
+                                                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                                        <XAxis dataKey="name" stroke="#888" />
+                                                        <YAxis domain={[0, 5]} stroke="#888" />
+                                                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#111', borderColor: '#333' }} />
+                                                        <Bar dataKey="score" fill="#10b981" radius={[4, 4, 0, 0]} label={{ position: 'top', fill: '#fff' }} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        )
+                                    })()}
+                                </CardContent>
+                            </Card>
+
+                            {/* Demographics */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Attendee Demographics</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        {/* Attendee Types */}
+                                        <div>
+                                            <h4 className="font-medium mb-3">By Type</h4>
+                                            <div className="space-y-2">
+                                                {(() => {
+                                                    const typeCounts: Record<string, number> = {}
+                                                    attendees.forEach(a => {
+                                                        (a.attendee_type || []).forEach((t: string) => {
+                                                            typeCounts[t] = (typeCounts[t] || 0) + 1
+                                                        })
                                                     })
-                                                })
-                                                return Object.entries(typeCounts)
-                                                    .sort((a, b) => b[1] - a[1])
-                                                    .slice(0, 6)
-                                                    .map(([type, count]) => (
-                                                        <div key={type} className="flex justify-between items-center">
-                                                            <span className="text-sm">{type}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-neon-purple rounded-full"
-                                                                        style={{ width: `${(count / stats.totalUsers) * 100}%` }}
-                                                                    />
+                                                    return Object.entries(typeCounts)
+                                                        .sort((a, b) => b[1] - a[1])
+                                                        .slice(0, 6)
+                                                        .map(([type, count]) => (
+                                                            <div key={type} className="flex justify-between items-center">
+                                                                <span className="text-sm">{type}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className="h-full bg-neon-purple rounded-full"
+                                                                            style={{ width: `${(count / stats.totalUsers) * 100}%` }}
+                                                                        />
+                                                                    </div>
+                                                                    <span className="text-sm text-muted-foreground w-8">{count}</span>
                                                                 </div>
-                                                                <span className="text-sm text-muted-foreground w-8">{count}</span>
                                                             </div>
-                                                        </div>
-                                                    ))
-                                            })()}
+                                                        ))
+                                                })()}
+                                            </div>
+                                        </div>
+
+                                        {/* Age Ranges */}
+                                        <div>
+                                            <h4 className="font-medium mb-3">By Age Range</h4>
+                                            <div className="space-y-2">
+                                                {(() => {
+                                                    const ageCounts: Record<string, number> = {}
+                                                    attendees.forEach(a => {
+                                                        if (a.age_range) {
+                                                            ageCounts[a.age_range] = (ageCounts[a.age_range] || 0) + 1
+                                                        }
+                                                    })
+                                                    return Object.entries(ageCounts)
+                                                        .sort((a, b) => a[0].localeCompare(b[0]))
+                                                        .map(([range, count]) => (
+                                                            <div key={range} className="flex justify-between items-center">
+                                                                <span className="text-sm">{range}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className="h-full bg-neon-blue rounded-full"
+                                                                            style={{ width: `${(count / stats.totalUsers) * 100}%` }}
+                                                                        />
+                                                                    </div>
+                                                                    <span className="text-sm text-muted-foreground w-8">{count}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
+                                </CardContent>
+                            </Card>
 
-                                    {/* Age Ranges */}
-                                    <div>
-                                        <h4 className="font-medium mb-3">By Age Range</h4>
-                                        <div className="space-y-2">
-                                            {(() => {
-                                                const ageCounts: Record<string, number> = {}
-                                                attendees.forEach(a => {
-                                                    if (a.age_range) {
-                                                        ageCounts[a.age_range] = (ageCounts[a.age_range] || 0) + 1
-                                                    }
-                                                })
-                                                return Object.entries(ageCounts)
-                                                    .sort((a, b) => a[0].localeCompare(b[0]))
-                                                    .map(([range, count]) => (
-                                                        <div key={range} className="flex justify-between items-center">
-                                                            <span className="text-sm">{range}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-neon-blue rounded-full"
-                                                                        style={{ width: `${(count / stats.totalUsers) * 100}%` }}
-                                                                    />
-                                                                </div>
-                                                                <span className="text-sm text-muted-foreground w-8">{count}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                            })()}
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                            {/* Qualification Status */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Prize Qualification Status</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {(() => {
+                                        const qualified = leaderboard.filter(e => e.vendor_visits >= 5).length
+                                        const notQualified = leaderboard.length - qualified
+                                        return (
+                                            <div className="flex items-center gap-6">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-4 h-4 rounded-full bg-neon-green" />
+                                                    <span className="text-sm">Qualified: <strong>{qualified}</strong></span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-4 h-4 rounded-full bg-muted" />
+                                                    <span className="text-sm">In Progress: <strong>{notQualified}</strong></span>
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                        {/* Qualification Status */}
+                        {/* CHARTS ROW 3: Hourly Activity */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Prize Qualification Status</CardTitle>
+                                <CardTitle>Hourly Engagement</CardTitle>
+                                <CardDescription>Scans and Submissions over time</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {(() => {
-                                    const qualified = leaderboard.filter(e => e.vendor_visits >= 5).length
-                                    const notQualified = leaderboard.length - qualified
+                                    const activity: Record<string, { scans: number, answers: number }> = {}
+
+                                    scans.forEach(s => {
+                                        const hour = new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', hour12: true })
+                                        if (!activity[hour]) activity[hour] = { scans: 0, answers: 0 }
+                                        activity[hour].scans++
+                                    })
+
+                                    submissions.forEach(s => {
+                                        const hour = new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', hour12: true })
+                                        if (!activity[hour]) activity[hour] = { scans: 0, answers: 0 }
+                                        activity[hour].answers++
+                                    })
+
+                                    const data = Object.entries(activity)
+                                        .map(([time, counts]) => ({ time, ...counts }))
+                                        .sort((a, b) => {
+                                            // Simple sort by time string might handle AM/PM roughly if format is consistent, 
+                                            // but for robust sort we might need raw hour. 
+                                            // For now, simple sort or relying on creation order:
+                                            return new Date('2000/01/01 ' + a.time).getTime() - new Date('2000/01/01 ' + b.time).getTime()
+                                        })
+
                                     return (
-                                        <div className="flex items-center gap-6">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-neon-green" />
-                                                <span className="text-sm">Qualified: <strong>{qualified}</strong></span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded-full bg-muted" />
-                                                <span className="text-sm">In Progress: <strong>{notQualified}</strong></span>
-                                            </div>
+                                        <div className="h-[300px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={data}>
+                                                    <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                                    <XAxis dataKey="time" stroke="#888" />
+                                                    <YAxis stroke="#888" />
+                                                    <Tooltip contentStyle={{ backgroundColor: '#111', borderColor: '#333' }} />
+                                                    <Legend />
+                                                    <Line type="monotone" dataKey="scans" stroke="#10b981" strokeWidth={2} name="Scans" />
+                                                    <Line type="monotone" dataKey="answers" stroke="#8b5cf6" strokeWidth={2} name="Quest Answers" />
+                                                </LineChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     )
                                 })()}
