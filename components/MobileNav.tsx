@@ -7,8 +7,14 @@ import { Home, Trophy, QrCode, ClipboardCheck, Map as MapIcon } from "lucide-rea
 export function MobileNav() {
     const pathname = usePathname()
 
-    // Don't show on auth pages or home
-    if (pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/check-in") {
+    // Don't show on auth pages, home, or admin pages
+    if (
+        pathname === "/" ||
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/check-in" ||
+        pathname.startsWith("/admin")
+    ) {
         return null
     }
 
